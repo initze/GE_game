@@ -5,6 +5,7 @@ from pykml.factory import GX_ElementMaker as GX
 from osgeo import ogr
 import argparse
 import numpy as np
+import fiona
 
 mode = 'coast'
 parser = argparse.ArgumentParser(usage="")
@@ -28,42 +29,31 @@ def make_random_point():
     lat = (np.random.random(1)*180-90)[0]
     return lon, lat
 
+def make_city_point():
+    with fiona.open(r'vectors/urbanareas1_1.shp') as ds:
+        nfeatures = ds.session.get_length()
+        index = np.random.randint(0, nfeatures, size=1)[0]
+        lon, lat = ds[index]['geometry']['coordinates']
+        return lon, lat
 
 
-lon, lat = make_random_point()
-p = 'vectors/world.shp'
-
-
-ds = ogr.Open(p)
-lyr = ds.GetLayerByIndex(0)
-feat = lyr.GetFeature(0)
-geom = feat.geometry()
-
-if args.mode == 'coast':
-    bnd = geom.Boundary()
-    bnd_s = bnd.Simplify(10)
-    """
-    #reproject to metric system
-    #world mercator
-    srx_wm = ogr.osr.SpatialReference()
-    srx_wm.ImportFromEPSG(3857)
-    #latlon
-    srx_ll = ogr.osr.SpatialReference()
-    srx_ll.ImportFromEPSG(3857)
-
-    bnd_s.TransformTo(srx_wm)
-    """
-    geom = bnd_s.Buffer(0.01)
-    #geom.TransformTo(srx_ll)
-
-g, l = geom_sr_from_point(lat, lon, 4326)
-
-while not ogr.Geometry.Intersects(g, geom):
-    lon = (np.random.random(1)*360-180)[0]
-    lat = (np.random.random(1)*180-90)[0]
+if args.mode == 'city':
+    lon, lat = make_city_point()
     g, l = geom_sr_from_point(lat, lon, 4326)
-ds = None
-    
+else:
+    p = 'vectors/world.shp'
+    ds = ogr.Open(p)
+    lyr = ds.GetLayerByIndex(0)
+    feat = lyr.GetFeature(0)
+    geom = feat.geometry()
+    lon, lat = make_random_point()
+    g, l = geom_sr_from_point(lat, lon, 4326)
+    while not ogr.Geometry.Intersects(g, geom):
+        lon, lat = make_random_point()
+        g, l = geom_sr_from_point(lat, lon, 4326)
+    ds = None
+
+
 #runKML
 doc = KML.kml(
   etree.Comment(' required when using gx-prefixed elements '),
