@@ -10,8 +10,10 @@ import fiona
 mode = 'coast'
 parser = argparse.ArgumentParser(usage="")
 parser.add_argument('-m', '--mode', dest='mode', nargs='?', type=str, help="Mode")
+parser.add_argument('-shp', '--shapefile', dest='shp', nargs='*', type=str, help="custom Shapefile mode")
 parser.add_argument('-vh', '--viewheight', dest='vh', type=int, default=100000, help="Viewing height in meters in Google Earth. Default is 100,000 (100km)")
 args = parser.parse_args()
+
 
 def geom_sr_from_point(lat, lon, epsg):
     wkt_bbox = 'POLYGON(({0} {1}, {2} {1}, {2} {3}, {0} {3}, {0} {1}))'.format(lon-0.1, lat-0.1, lon+0.1, lat+0.1)
@@ -29,17 +31,26 @@ def make_random_point():
     lat = (np.random.random(1)*180-90)[0]
     return lon, lat
 
-def make_city_point():
-    with fiona.open(r'vectors/urbanareas1_1.shp') as ds:
+def make_city_point(path):
+    with fiona.open(path) as ds:
         nfeatures = ds.session.get_length()
         index = np.random.randint(0, nfeatures, size=1)[0]
-        lon, lat = ds[index]['geometry']['coordinates']
+        lon, lat = ds[index]['geometry']['coordinates'][:2]
         return lon, lat
 
 
 if args.mode == 'city':
-    lon, lat = make_city_point()
+    lon, lat = make_city_point(r'vectors/urbanareas1_1.shp')
     g, l = geom_sr_from_point(lat, lon, 4326)
+
+elif args.mode == 'ard':
+    lon, lat = make_city_point(r'vectors/ard.shp')
+    g, l = geom_sr_from_point(lat, lon, 4326)
+
+elif args.shp:
+    lon, lat = make_city_point(args.shp[0])
+    g, l = geom_sr_from_point(lat, lon, 4326)
+
 else:
     p = 'vectors/world.shp'
     ds = ogr.Open(p)
