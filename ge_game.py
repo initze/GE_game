@@ -6,6 +6,7 @@ from osgeo import ogr
 import argparse
 import numpy as np
 import fiona
+import os
 
 mode = 'coast'
 parser = argparse.ArgumentParser(usage="")
@@ -38,20 +39,31 @@ def make_city_point(path):
         lon, lat = ds[index]['geometry']['coordinates'][:2]
         return lon, lat
 
+def make_kml(lon, lat, vh, filename=r'outfile.kml'):
+    #runKML
+    doc = KML.kml(
+      etree.Comment(' required when using gx-prefixed elements '),
+      GX.FlyTo(
+        GX.flyToMode('bounce'),
+        GX.duration('0.5')
+      ),
+      KML.Placemark(
+        KML.name('gx:altitudeMode Example'),
+        KML.Camera(
+          KML.altitude(vh),
+          KML.longitude(str(lon)),
+          KML.latitude(str(lat))
+        ),
+      ),
+    )
+    string = etree.tostring(etree.ElementTree(doc),pretty_print=True)
+    #writeToFile
+    f = open(filename, 'w')
+    f.writelines(string)
+    f.close()
+    return
 
-if args.mode == 'city':
-    lon, lat = make_city_point(r'vectors/urbanareas1_1.shp')
-    g, l = geom_sr_from_point(lat, lon, 4326)
-
-elif args.mode == 'ard':
-    lon, lat = make_city_point(r'vectors/ard.shp')
-    g, l = geom_sr_from_point(lat, lon, 4326)
-
-elif args.shp:
-    lon, lat = make_city_point(args.shp[0])
-    g, l = geom_sr_from_point(lat, lon, 4326)
-
-else:
+def make_world_point():
     p = 'vectors/world.shp'
     ds = ogr.Open(p)
     lyr = ds.GetLayerByIndex(0)
@@ -63,27 +75,24 @@ else:
         lon, lat = make_random_point()
         g, l = geom_sr_from_point(lat, lon, 4326)
     ds = None
+    return lon, lat
+
+def main():
+    key = 0
+    while str(key).lower() != 'q':
+        if args.mode == 'city':
+            lon, lat = make_city_point(r'vectors/urbanareas1_1.shp')
+        elif args.mode == 'ard':
+            lon, lat = make_city_point(r'vectors/ard.shp')
+        elif args.shp:
+            lon, lat = make_city_point(args.shp[0])
+        else:
+            lon, lat = make_world_point()
+
+        make_kml(lon, lat, args.vh)
+        os.system(r'outfile.kml')
+        key = raw_input("press q + Enter to quit or Enter to continue: ")
 
 
-#runKML
-doc = KML.kml(
-  etree.Comment(' required when using gx-prefixed elements '),
-  GX.FlyTo(
-    GX.flyToMode('bounce'),
-    GX.duration('0.5')
-  ),
-  KML.Placemark(
-    KML.name('gx:altitudeMode Example'),
-    KML.Camera(
-      KML.altitude(args.vh),
-      KML.longitude(str(lon)),
-      KML.latitude(str(lat))
-    ),
-  ),
-)
-string = etree.tostring(etree.ElementTree(doc),pretty_print=True)
-
-#writeToFile
-f = open('outfile.kml', 'w')
-f.writelines(string)
-f.close()
+if __name__ == "__main__":
+    main()
