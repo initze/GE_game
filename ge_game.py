@@ -7,6 +7,8 @@ import argparse
 import numpy as np
 import fiona
 import os
+import sys
+from PyQt4 import QtGui, Qt, QtCore
 
 mode = 'coast'
 parser = argparse.ArgumentParser(usage="")
@@ -14,6 +16,41 @@ parser.add_argument('-m', '--mode', dest='mode', nargs='?', type=str, help="Mode
 parser.add_argument('-shp', '--shapefile', dest='shp', nargs='*', type=str, help="custom Shapefile mode")
 parser.add_argument('-vh', '--viewheight', dest='vh', type=int, default=100000, help="Viewing height in meters in Google Earth. Default is 100,000 (100km)")
 args = parser.parse_args()
+
+class GameGui(QtGui.QMainWindow):
+
+    def __init__(self, game_object):
+        super(GameGui, self).__init__()
+
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+        self.initUI()
+        self.game = game_object
+
+    def initUI(self):
+
+        btn1 = QtGui.QPushButton("Next", self)
+        btn1.move(30, 20)
+
+        btnquit = QtGui.QPushButton("Quit", self)
+        btnquit.move(150, 20)
+
+        btn1.clicked.connect(self.buttonClicked)
+        btnquit.clicked.connect(self.quitClick)
+
+        self.statusBar()
+
+        self.setGeometry(300, 300, 280, 70)
+        self.setWindowTitle('Google Earth Game')
+        self.show()
+
+    def buttonClicked(self):
+        sender = self.sender()
+        self.statusBar().showMessage('Next Object')
+        self.game.next()
+
+    def quitClick(self):
+        self.close()
+
 
 class GE_Game():
 
@@ -28,6 +65,7 @@ class GE_Game():
             self.make_point_series_from_vector()
         else:
             self.make_random_point_series()
+        self.next()
 
 
     def make_kml(self, lon, lat):
@@ -112,16 +150,20 @@ class GE_Game():
 
 
 def main():
+
+    # set game modes from input args
     print args.shp
     if args.shp:
         game = GE_Game(input_vector=args.shp[0], vh=args.vh)
     else:
         game = GE_Game(vh=args.vh)
     key = ''
-    # Didn't prompt last time!
-    while (game.active) and (key.lower() != 'q'):
-        game.next()
-        key = raw_input("press q + Enter to quit or Enter to continue: ")
+
+    # Start Gui and run program
+    app = QtGui.QApplication(sys.argv)
+    ex = GameGui(game)
+
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
     main()
