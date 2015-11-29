@@ -32,6 +32,7 @@ class GameGui(QtGui.QMainWindow):
 
         btn_next = QtGui.QPushButton("Next", self)
         btn_next.move(30, 20)
+        btn_next.setAutoDefault(True)
 
         btn_quit = QtGui.QPushButton("Quit", self)
         btn_quit.move(150, 20)
