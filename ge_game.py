@@ -36,18 +36,22 @@ class GameGui(QtGui.QMainWindow):
         btn_quit = QtGui.QPushButton("Quit", self)
         btn_quit.move(150, 20)
 
-        btn_next.clicked.connect(self.buttonClicked)
+        btn_settings = QtGui.QPushButton("Edit view height", self)
+        btn_settings.move(30, 60)
+
+        btn_next.clicked.connect(self.buttonClick)
         btn_quit.clicked.connect(self.quitClick)
+        btn_settings.clicked.connect(self.settingsDialog)
 
         self.statusBar()
 
-        self.setGeometry(300, 300, 280, 70)
+        self.setGeometry(300, 300, 280, 120)
         self.setWindowTitle('Google Earth Game')
         self.show()
 
     ######################
     # Button Actions
-    def buttonClicked(self):
+    def buttonClick(self):
         sender = self.sender()
         self.statusBar().showMessage('Next Object')
         self.game.next()
@@ -55,6 +59,17 @@ class GameGui(QtGui.QMainWindow):
     def quitClick(self):
         self.close()
     ##################
+
+    def settingsDialog(self):
+        text, ok = QtGui.QInputDialog.getText(self, 'Input Dialog',
+            'Enter new View height in meters:')
+        if ok:
+            try:
+                self.game.vh = float(text)
+                self.game.reload()
+            except:
+                # TODO: pop-up error message
+                None
 
 class GE_Game():
 
@@ -127,6 +142,10 @@ class GE_Game():
         self.lon = np.array(lon_list)
         self.lat = np.array(lat_list)
 
+
+    def reload(self):
+        self.make_kml(self.lon[self.counter], self.lat[self.counter])
+        os.system(self.outfile)
 
     def next(self):
         self.make_kml(self.lon[self.counter], self.lat[self.counter])
