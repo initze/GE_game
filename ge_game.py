@@ -26,16 +26,18 @@ class GameGui(QtGui.QMainWindow):
         self.initUI()
         self.game = game_object
 
+
+    # Initiate GUI
     def initUI(self):
 
-        btn1 = QtGui.QPushButton("Next", self)
-        btn1.move(30, 20)
+        btn_next = QtGui.QPushButton("Next", self)
+        btn_next.move(30, 20)
 
-        btnquit = QtGui.QPushButton("Quit", self)
-        btnquit.move(150, 20)
+        btn_quit = QtGui.QPushButton("Quit", self)
+        btn_quit.move(150, 20)
 
-        btn1.clicked.connect(self.buttonClicked)
-        btnquit.clicked.connect(self.quitClick)
+        btn_next.clicked.connect(self.buttonClicked)
+        btn_quit.clicked.connect(self.quitClick)
 
         self.statusBar()
 
@@ -43,6 +45,8 @@ class GameGui(QtGui.QMainWindow):
         self.setWindowTitle('Google Earth Game')
         self.show()
 
+    ######################
+    # Button Actions
     def buttonClicked(self):
         sender = self.sender()
         self.statusBar().showMessage('Next Object')
@@ -50,7 +54,7 @@ class GameGui(QtGui.QMainWindow):
 
     def quitClick(self):
         self.close()
-
+    ##################
 
 class GE_Game():
 
@@ -157,7 +161,6 @@ def main():
         game = GE_Game(input_vector=args.shp[0], vh=args.vh)
     else:
         game = GE_Game(vh=args.vh)
-    key = ''
 
     # Start Gui and run program
     app = QtGui.QApplication(sys.argv)
