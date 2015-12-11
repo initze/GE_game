@@ -17,6 +17,49 @@ parser.add_argument('-shp', '--shapefile', dest='shp', nargs='*', type=str, help
 parser.add_argument('-vh', '--viewheight', dest='vh', type=int, default=100000, help="Viewing height in meters in Google Earth. Default is 100,000 (100km)")
 args = parser.parse_args()
 
+class Example(QtGui.QWidget):
+
+    def __init__(self):
+        super(Example, self).__init__()
+
+        self.initUI()
+
+    def initUI(self):
+
+        hbox = QtGui.QHBoxLayout(self)
+
+        # TODO: Change Styling
+        topleft = QtGui.QFrame(self)
+        topleft.setFrameShape(QtGui.QFrame.StyledPanel)
+
+        topright = QtGui.QFrame(self)
+        topright.setFrameShape(QtGui.QFrame.StyledPanel)
+
+        bottom = QtGui.QFrame(self)
+        bottom.setFrameShape(QtGui.QFrame.StyledPanel)
+
+        splitter1 = QtGui.QSplitter(QtCore.Qt.Horizontal)
+        splitter1.addWidget(topleft)
+        splitter1.addWidget(topright)
+
+        splitter2 = QtGui.QSplitter(QtCore.Qt.Vertical)
+        splitter2.addWidget(splitter1)
+        splitter2.addWidget(bottom)
+
+        hbox.addWidget(splitter2)
+        self.setLayout(hbox)
+        QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('Cleanlooks'))
+
+        self.setGeometry(300, 300, 300, 200)
+        self.setWindowTitle('QtGui.QSplitter')
+        self.show()
+
+    def onChanged(self, text):
+
+        self.lbl.setText(text)
+        self.lbl.adjustSize()
+
+
 class GameGui(QtGui.QMainWindow):
 
     def __init__(self, game_object):
@@ -40,9 +83,13 @@ class GameGui(QtGui.QMainWindow):
         btn_settings = QtGui.QPushButton("Edit view height", self)
         btn_settings.move(30, 60)
 
+        btn_start = QtGui.QPushButton("Start Menu", self)
+        btn_start.move(150, 60)
+
         btn_next.clicked.connect(self.buttonClick)
         btn_quit.clicked.connect(self.quitClick)
         btn_settings.clicked.connect(self.settingsDialog)
+        btn_start.clicked.connect(self.mainMenu)
 
         self.statusBar()
 
@@ -61,6 +108,9 @@ class GameGui(QtGui.QMainWindow):
         self.close()
     ##################
 
+    def mainMenu(self):
+        self.mm = Example()
+
     def settingsDialog(self):
         text, ok = QtGui.QInputDialog.getText(self, 'Input Dialog',
             'Enter new View height in meters:')
@@ -71,6 +121,15 @@ class GameGui(QtGui.QMainWindow):
             except:
                 # TODO: pop-up error message
                 None
+
+    def newwindow(self):
+        self.wid = QtGui.QWidget()
+        self.wid.resize(250, 150)
+        self.wid.setWindowTitle('NewWindow')
+        print "widget opened"
+        self.wid.show()
+
+
 
 class GE_Game():
 
@@ -120,7 +179,7 @@ class GE_Game():
             np.random.shuffle(self.index)
             self.lon, self.lat = np.array([ds[int(i)]['geometry']['coordinates'][:2] for i in self.index]).T
 
-    def make_random_point_series(self, npoints=20):
+    def make_random_point_series(self, npoints=5):
         print "Creating Points"
         lon_list = []
         lat_list = []
@@ -185,8 +244,10 @@ def main():
     # Start Gui and run program
     app = QtGui.QApplication(sys.argv)
     ex = GameGui(game)
-
     sys.exit(app.exec_())
+
+    #ex = StartMenu(game)
+    #sys.exit(app.exec_())
 
 if __name__ == "__main__":
     main()
