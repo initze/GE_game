@@ -9,6 +9,7 @@ import fiona
 import os
 import sys
 from PyQt4 import QtGui, Qt, QtCore
+from mainMenu4 import Ui_MainWindow
 
 mode = 'coast'
 parser = argparse.ArgumentParser(usage="")
@@ -17,119 +18,53 @@ parser.add_argument('-shp', '--shapefile', dest='shp', nargs='*', type=str, help
 parser.add_argument('-vh', '--viewheight', dest='vh', type=int, default=100000, help="Viewing height in meters in Google Earth. Default is 100,000 (100km)")
 args = parser.parse_args()
 
-class Example(QtGui.QWidget):
+class MainWindow(QtGui.QMainWindow):
 
-    def __init__(self):
-        super(Example, self).__init__()
-
-        self.initUI()
-
-    def initUI(self):
-
-        hbox = QtGui.QHBoxLayout(self)
-
-        # TODO: Change Styling
-        topleft = QtGui.QFrame(self)
-        topleft.setFrameShape(QtGui.QFrame.StyledPanel)
-
-        topright = QtGui.QFrame(self)
-        topright.setFrameShape(QtGui.QFrame.StyledPanel)
-
-        bottom = QtGui.QFrame(self)
-        bottom.setFrameShape(QtGui.QFrame.StyledPanel)
-
-        splitter1 = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        splitter1.addWidget(topleft)
-        splitter1.addWidget(topright)
-
-        splitter2 = QtGui.QSplitter(QtCore.Qt.Vertical)
-        splitter2.addWidget(splitter1)
-        splitter2.addWidget(bottom)
-
-        hbox.addWidget(splitter2)
-        self.setLayout(hbox)
-        QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('Cleanlooks'))
-
-        self.setGeometry(300, 300, 300, 200)
-        self.setWindowTitle('QtGui.QSplitter')
-        self.show()
-
-    def onChanged(self, text):
-
-        self.lbl.setText(text)
-        self.lbl.adjustSize()
-
-
-class GameGui(QtGui.QMainWindow):
-
-    def __init__(self, game_object):
-        super(GameGui, self).__init__()
-
+    def __init__(self, game):
+        super(MainWindow, self).__init__()
+        self.ui=Ui_MainWindow()
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
-        self.initUI()
-        self.game = game_object
-
-
-    # Initiate GUI
-    def initUI(self):
-
-        btn_next = QtGui.QPushButton("Next", self)
-        btn_next.move(30, 20)
-        btn_next.setAutoDefault(True)
-
-        btn_quit = QtGui.QPushButton("Quit", self)
-        btn_quit.move(150, 20)
-
-        btn_settings = QtGui.QPushButton("Edit view height", self)
-        btn_settings.move(30, 60)
-
-        btn_start = QtGui.QPushButton("Start Menu", self)
-        btn_start.move(150, 60)
-
-        btn_next.clicked.connect(self.buttonClick)
-        btn_quit.clicked.connect(self.quitClick)
-        btn_settings.clicked.connect(self.settingsDialog)
-        btn_start.clicked.connect(self.mainMenu)
-
-        self.statusBar()
-
-        self.setGeometry(300, 300, 280, 120)
-        self.setWindowTitle('Google Earth Game')
+        self.ui.setupUi(self)
+        self.game = game
+        self.ui.toolButton.clicked.connect(self.file_loader)
+        self.ui.pushButton.clicked.connect(self.start_game)
+        self.ui.pushButton_2.clicked.connect(self.quit_game)
+        self.ui.pushButton_3.clicked.connect(self.next_feature)
+        self.ui.pushButton_4.clicked.connect(self.start_game)
         self.show()
 
-    ######################
-    # Button Actions
-    def buttonClick(self):
-        sender = self.sender()
-        self.statusBar().showMessage('Next Object')
+    def start_game(self):
+        self.ui.groupBox_2.setEnabled(True)
+        self.ui.pushButton_3.setEnabled(True)
+        self.ui.pushButton_4.setEnabled(False)
+        if self.ui.radioButton.isChecked():
+            self.game.make_random_point_series(npoints=self.ui.spinBox.value())
+        elif self.ui.radioButton_2.isChecked():
+            self.game.make_point_series_from_vector()
         self.game.next()
+        self.update_feature_counter()
+        pass
 
-    def quitClick(self):
+    def file_loader(self):
+        self.game.input_vector = str(QtGui.QFileDialog.getOpenFileName()) # Filename line
+        print self.game.input_vector
+        print os.path.exists(self.game.input_vector)
+        self.ui.radioButton_2.setChecked(True)
+        self.ui.radioButton.setChecked(False)
+
+    def next_feature(self):
+        self.game.next()
+        self.update_feature_counter()
+        if self.game.counter == self.game.nfeatures:
+            self.ui.pushButton_3.setEnabled(False)
+            self.ui.pushButton_4.setEnabled(True)
+
+    def quit_game(self):
         self.close()
-    ##################
 
-    def mainMenu(self):
-        self.mm = Example()
-
-    def settingsDialog(self):
-        text, ok = QtGui.QInputDialog.getText(self, 'Input Dialog',
-            'Enter new View height in meters:')
-        if ok:
-            try:
-                self.game.vh = float(text)
-                self.game.reload()
-            except:
-                # TODO: pop-up error message
-                None
-
-    def newwindow(self):
-        self.wid = QtGui.QWidget()
-        self.wid.resize(250, 150)
-        self.wid.setWindowTitle('NewWindow')
-        print "widget opened"
-        self.wid.show()
-
-
+    def update_feature_counter(self):
+        self.ui.lineEdit.setText('{0} / {1}'.format(self.game.counter, self.game.nfeatures))
+        self.ui.lineEdit.setEnabled(False)
 
 class GE_Game():
 
@@ -138,14 +73,15 @@ class GE_Game():
         self.vh = vh
         self.outfile = outfile
         self.active = True
-
+        self.input_vector = input_vector
+        """
         if input_vector:
             self.input_vector = input_vector
             self.make_point_series_from_vector()
         else:
             self.make_random_point_series()
         self.next()
-
+        """
 
     def make_kml(self, lon, lat):
         """
@@ -235,16 +171,19 @@ class GE_Game():
 def main():
 
     # set game modes from input args
-    print args.shp
+    #print args.shp
+    """
     if args.shp:
         game = GE_Game(input_vector=args.shp[0], vh=args.vh)
     else:
         game = GE_Game(vh=args.vh)
-
+    """
     # Start Gui and run program
-    app = QtGui.QApplication(sys.argv)
-    ex = GameGui(game)
-    sys.exit(app.exec_())
+    #app = QtGui.QApplication(sys.argv)
+    #ex = GameGui(game)
+    app = QtGui.QApplication (sys.argv)
+    m = MainWindow(GE_Game(vh=args.vh))
+    sys.exit (app.exec_ () )
 
     #ex = StartMenu(game)
     #sys.exit(app.exec_())
