@@ -9,7 +9,9 @@ import fiona
 import os
 import sys
 from PyQt4 import QtGui, Qt, QtCore
-from mainMenu4 import Ui_MainWindow
+from mainMenu import Ui_MainWindow
+from gameMenu import Ui_GameMenu
+from settingsMenu import Ui_SettingsMenu
 
 mode = 'coast'
 parser = argparse.ArgumentParser(usage="")
@@ -18,21 +20,88 @@ parser.add_argument('-shp', '--shapefile', dest='shp', nargs='*', type=str, help
 parser.add_argument('-vh', '--viewheight', dest='vh', type=int, default=100000, help="Viewing height in meters in Google Earth. Default is 100,000 (100km)")
 args = parser.parse_args()
 
-class MainWindow(QtGui.QMainWindow):
 
+class Settings(QtGui.QWidget):
+    def __init__(self):
+        super(Settings, self).__init__()
+        self.ui = Ui_SettingsMenu()
+        self.ui.setupUi(self)
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+
+class GameMenu(QtGui.QWidget):
+    def __init__(self):
+        super(GameMenu, self).__init__()
+        self.ui = Ui_GameMenu()
+        self.ui.setupUi(self)
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+
+
+class MainWindow(QtGui.QMainWindow):
     def __init__(self, game):
         super(MainWindow, self).__init__()
         self.ui=Ui_MainWindow()
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
         self.ui.setupUi(self)
+        self.settings = Settings()
+        self.gameMenu = GameMenu()
         self.game = game
-        self.ui.toolButton.clicked.connect(self.file_loader)
-        self.ui.pushButton.clicked.connect(self.start_game)
+        self.settings.ui.lineEdit.setText(str(self.game.vh))
+        #self.ui.toolButton.clicked.connect(self.file_loader)
+        #self.ui.toolButton.clicked.connect(self)
+        self.ui.pushButton.clicked.connect(self.show_settings)
         self.ui.pushButton_2.clicked.connect(self.quit_game)
-        self.ui.pushButton_3.clicked.connect(self.next_feature)
-        self.ui.pushButton_4.clicked.connect(self.start_game)
+        self.ui.toolButton.clicked.connect(self.showDialog)
+        self.settings.ui.pushButton.clicked.connect(self.start_game)
+        self.settings.ui.pushButton_2.clicked.connect(self.back_to_main)
+        #self.settings.ui.lineEdit.textChanged(self.update_vh)
+        self.gameMenu.ui.pushButton.clicked.connect(self.next_feature)
+        self.gameMenu.ui.pushButton_2.clicked.connect(self.back_to_main)
+        self.gameMenu.ui.pushButton_4.clicked.connect(self.settings.show)
+
+        #self.ui.pushButton_3.clicked.connect(self.next_feature)
+        #self.ui.pushButton_4.clicked.connect(self.start_game)
         self.show()
 
+    def back_to_main(self):
+        self.settings.hide()
+        self.settings.ui.pushButton_2.setEnabled(False)
+        self.gameMenu.hide()
+        self.show()
+
+
+    def showDialog(self):
+        self.fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file',
+                os.getcwd())
+        self.ui.radioButton_2.setChecked(True)
+        self.ui.radioButton.setChecked(False)
+        #TODO: show filename
+        #self.ui.toolButton.setText(os.path.split(self.fname)[-1])
+
+    # TODO: Add Settings View Height
+    def show_settings(self):
+        if self.ui.radioButton.isChecked():
+            self.mode = 1
+            self.game.vh = 100000
+        elif self.ui.radioButton_2.isChecked():
+            self.mode=2
+            self.game.vh = 7000
+        #self.settings.ui.lineEdit.setText(str(self.game.vh))
+        self.settings.show()
+        self.hide()
+        pass
+
+    def show_settings2(self):
+        pass
+
+    def start_game(self):
+        self.settings.hide()
+        self.settings.ui.pushButton_2.setEnabled(False)
+        self.hide()
+        self.gameMenu.show()
+        self.game.make_random_point_series(npoints=self.ui.spinBox.value())
+        self.game.next()
+
+    """
     def start_game(self):
         self.ui.groupBox_2.setEnabled(True)
         self.ui.pushButton_3.setEnabled(True)
@@ -44,6 +113,7 @@ class MainWindow(QtGui.QMainWindow):
         self.game.next()
         self.update_feature_counter()
         pass
+    """
 
     def file_loader(self):
         self.game.input_vector = str(QtGui.QFileDialog.getOpenFileName()) # Filename line
