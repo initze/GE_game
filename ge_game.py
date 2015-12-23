@@ -85,7 +85,6 @@ class MainWindow(QtGui.QMainWindow):
         elif self.ui.radioButton_2.isChecked():
             self.mode=2
             self.game.vh = 7000
-        #self.settings.ui.lineEdit.setText(str(self.game.vh))
         self.settings.show()
         self.hide()
         pass
@@ -100,20 +99,7 @@ class MainWindow(QtGui.QMainWindow):
         self.gameMenu.show()
         self.game.make_random_point_series(npoints=self.ui.spinBox.value())
         self.game.next()
-
-    """
-    def start_game(self):
-        self.ui.groupBox_2.setEnabled(True)
-        self.ui.pushButton_3.setEnabled(True)
-        self.ui.pushButton_4.setEnabled(False)
-        if self.ui.radioButton.isChecked():
-            self.game.make_random_point_series(npoints=self.ui.spinBox.value())
-        elif self.ui.radioButton_2.isChecked():
-            self.game.make_point_series_from_vector()
-        self.game.next()
         self.update_feature_counter()
-        pass
-    """
 
     def file_loader(self):
         self.game.input_vector = str(QtGui.QFileDialog.getOpenFileName()) # Filename line
@@ -125,16 +111,16 @@ class MainWindow(QtGui.QMainWindow):
     def next_feature(self):
         self.game.next()
         self.update_feature_counter()
-        if self.game.counter == self.game.nfeatures:
-            self.ui.pushButton_3.setEnabled(False)
-            self.ui.pushButton_4.setEnabled(True)
+        if not self.game.active:
+            self.gameMenu.ui.pushButton.setEnabled(False)
+            self.gameMenu.ui.pushButton_3.setEnabled(True)
 
     def quit_game(self):
         self.close()
 
     def update_feature_counter(self):
-        self.ui.lineEdit.setText('{0} / {1}'.format(self.game.counter, self.game.nfeatures))
-        self.ui.lineEdit.setEnabled(False)
+        self.gameMenu.ui.label.setText('Feature: {0} / {1}'.format(self.game.counter, self.game.nfeatures))
+        #self.settings.ui.lineEdit.setEnabled(False)
 
 class GE_Game():
 
@@ -144,14 +130,6 @@ class GE_Game():
         self.outfile = outfile
         self.active = True
         self.input_vector = input_vector
-        """
-        if input_vector:
-            self.input_vector = input_vector
-            self.make_point_series_from_vector()
-        else:
-            self.make_random_point_series()
-        self.next()
-        """
 
     def make_kml(self, lon, lat):
         """
@@ -217,7 +195,7 @@ class GE_Game():
         self.make_kml(self.lon[self.counter], self.lat[self.counter])
         os.system(self.outfile)
         self.counter += 1
-        if self.counter == self.nfeatures-1:
+        if self.counter == self.nfeatures:
             self.active = False
 
 
