@@ -13,13 +13,6 @@ from mainMenu import Ui_MainWindow
 from gameMenu import Ui_GameMenu
 from settingsMenu import Ui_SettingsMenu
 
-mode = 'coast'
-parser = argparse.ArgumentParser(usage="")
-parser.add_argument('-m', '--mode', dest='mode', nargs='?', type=str, help="Mode")
-parser.add_argument('-shp', '--shapefile', dest='shp', nargs='*', type=str, help="custom Shapefile mode")
-parser.add_argument('-vh', '--viewheight', dest='vh', type=int, default=100000, help="Viewing height in meters in Google Earth. Default is 100,000 (100km)")
-args = parser.parse_args()
-
 
 class Settings(QtGui.QWidget):
     def __init__(self):
@@ -28,6 +21,7 @@ class Settings(QtGui.QWidget):
         self.ui.setupUi(self)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
 
+
 class GameMenu(QtGui.QWidget):
     def __init__(self):
         super(GameMenu, self).__init__()
@@ -35,39 +29,41 @@ class GameMenu(QtGui.QWidget):
         self.ui.setupUi(self)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
 
+# TODO: restart needs to be fixed
+# TODO: auto reload for settings
+# TODO: make main Menu Ui separate
 
 class MainWindow(QtGui.QMainWindow):
-    def __init__(self, game):
+    #def __init__(self, game):
+    def __init__(self):
         super(MainWindow, self).__init__()
         self.ui=Ui_MainWindow()
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
         self.ui.setupUi(self)
-        self.settings = Settings()
+        self.settingsMenu = Settings()
         self.gameMenu = GameMenu()
-        self.game = game
-        self.settings.ui.lineEdit.setText(str(self.game.vh))
-        #self.ui.toolButton.clicked.connect(self.file_loader)
-        #self.ui.toolButton.clicked.connect(self)
-        self.ui.pushButton.clicked.connect(self.show_settings)
+
+        # mainMenu Actions
+        self.ui.pushButton.clicked.connect(self.start_game2)
         self.ui.pushButton_2.clicked.connect(self.quit_game)
         self.ui.toolButton.clicked.connect(self.showDialog)
-        self.settings.ui.pushButton.clicked.connect(self.start_game)
-        self.settings.ui.pushButton_2.clicked.connect(self.back_to_main)
-        #self.settings.ui.lineEdit.textChanged(self.update_vh)
-        self.gameMenu.ui.pushButton.clicked.connect(self.next_feature)
-        self.gameMenu.ui.pushButton_2.clicked.connect(self.back_to_main)
-        self.gameMenu.ui.pushButton_4.clicked.connect(self.settings.show)
 
-        #self.ui.pushButton_3.clicked.connect(self.next_feature)
-        #self.ui.pushButton_4.clicked.connect(self.start_game)
+        # settingsMenu Actions
+        self.settingsMenu.ui.pushButton.clicked.connect(self.update_vh)
+        self.settingsMenu.ui.pushButton.clicked.connect(self.show_game)
+        self.settingsMenu.ui.pushButton_2.clicked.connect(self.back_to_main)
+
+        # gameMenu Actions
+        self.gameMenu.ui.pushButton_Next.clicked.connect(self.next_feature)
+        self.gameMenu.ui.pushButton_Quit.clicked.connect(self.back_to_main)
+        self.gameMenu.ui.pushButton_Settings.clicked.connect(self.show_settings)
         self.show()
 
     def back_to_main(self):
-        self.settings.hide()
-        self.settings.ui.pushButton_2.setEnabled(False)
+        self.settingsMenu.hide()
+        self.settingsMenu.ui.pushButton_2.setEnabled(False)
         self.gameMenu.hide()
         self.show()
-
 
     def showDialog(self):
         self.fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file',
@@ -75,31 +71,53 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.radioButton_2.setChecked(True)
         self.ui.radioButton.setChecked(False)
         #TODO: show filename
-        #self.ui.toolButton.setText(os.path.split(self.fname)[-1])
+        self.ui.lineEdit_filePath.setText(self.fname)
 
-    # TODO: Add Settings View Height
-    def show_settings(self):
+    def show_settings_onstart(self):
         if self.ui.radioButton.isChecked():
             self.mode = 1
             self.game.vh = 100000
         elif self.ui.radioButton_2.isChecked():
             self.mode=2
             self.game.vh = 7000
-        self.settings.show()
+        self.settingsMenu.show()
         self.hide()
-        pass
+        self.game.next()
 
-    def show_settings2(self):
-        pass
+    def show_settings(self):
+        self.settingsMenu.show()
+        self.gameMenu.hide()
+
+    def update_vh(self):
+        self.game.vh = float(self.settingsMenu.ui.lineEdit.text())
+        #self.game.reload() # needs some improvement
+
+    def show_game(self):
+        self.settingsMenu.hide()
+        self.gameMenu.show()
 
     def start_game(self):
-        self.settings.hide()
-        self.settings.ui.pushButton_2.setEnabled(False)
+        self.game = GE_Game()
+        self.settingsMenu.hide()
+        self.settingsMenu.ui.pushButton_2.setEnabled(False)
         self.hide()
         self.gameMenu.show()
         self.game.make_random_point_series(npoints=self.ui.spinBox.value())
         self.game.next()
         self.update_feature_counter()
+
+    def start_game2(self):
+        # check out selected mode and call SubClass accordingly
+        if self.ui.radioButton.isChecked():
+            self.game = GE_Game_random(npoints=self.ui.spinBox.value())
+        elif (self.ui.radioButton_2.isChecked()) and (self.fname):
+            self.game = GE_Game_Vector(self.fname)
+        else:
+            return
+        self.settingsMenu.ui.lineEdit.setText(str(self.game.vh))
+        self.settingsMenu.show()
+        self.hide()
+        self.game.make_point_series()
 
     def file_loader(self):
         self.game.input_vector = str(QtGui.QFileDialog.getOpenFileName()) # Filename line
@@ -112,24 +130,21 @@ class MainWindow(QtGui.QMainWindow):
         self.game.next()
         self.update_feature_counter()
         if not self.game.active:
-            self.gameMenu.ui.pushButton.setEnabled(False)
-            self.gameMenu.ui.pushButton_3.setEnabled(True)
+            self.gameMenu.ui.pushButton_Next.setEnabled(False)
+            self.gameMenu.ui.pushButton_Reload.setEnabled(True)
 
     def quit_game(self):
         self.close()
 
     def update_feature_counter(self):
         self.gameMenu.ui.label.setText('Feature: {0} / {1}'.format(self.game.counter, self.game.nfeatures))
-        #self.settings.ui.lineEdit.setEnabled(False)
 
 class GE_Game():
 
-    def __init__(self, vh=100000, outfile=r'outfile.kml', input_vector=None):
+    def __init__(self, outfile=r'outfile.kml'):
         self.counter = 0
-        self.vh = vh
         self.outfile = outfile
         self.active = True
-        self.input_vector = input_vector
 
     def make_kml(self, lon, lat):
         """
@@ -156,48 +171,17 @@ class GE_Game():
         f.writelines(string)
         f.close()
 
-    def make_point_series_from_vector(self):
-        with fiona.open(self.input_vector) as ds:
-            self.nfeatures = ds.session.get_length() # get number of features
-            self.index = np.arange(0, self.nfeatures, dtype=np.uint16) # make indices
-            np.random.shuffle(self.index)
-            self.lon, self.lat = np.array([ds[int(i)]['geometry']['coordinates'][:2] for i in self.index]).T
-
-    def make_random_point_series(self, npoints=5):
-        print "Creating Points"
-        lon_list = []
-        lat_list = []
-        counter_local = 0
-        p = 'vectors/world.shp'
-        ds = ogr.Open(p)
-        lyr = ds.GetLayerByIndex(0)
-        feat = lyr.GetFeature(0)
-        geom = feat.geometry()
-        while counter_local < npoints:
-            lon, lat = self.make_random_point()
-            g, l = self.geom_sr_from_point(lat, lon, 4326)
-            if ogr.Geometry.Intersects(g, geom):
-                lon_list.append(lon)
-                lat_list.append(lat)
-                counter_local += 1
-                print counter_local
-        ds = None
-        self.nfeatures = len(lon_list)
-        self.lon = np.array(lon_list)
-        self.lat = np.array(lat_list)
-
-
+    # TODO: needs to be fixed
     def reload(self):
         self.make_kml(self.lon[self.counter], self.lat[self.counter])
         os.system(self.outfile)
-
+    # TODO: needs to be fixed
     def next(self):
         self.make_kml(self.lon[self.counter], self.lat[self.counter])
         os.system(self.outfile)
         self.counter += 1
         if self.counter == self.nfeatures:
             self.active = False
-
 
     @staticmethod
     def make_random_point():
@@ -214,27 +198,58 @@ class GE_Game():
         geom_bbox.AssignSpatialReference(sr_bbox)
         return geom_bbox, sr_bbox
 
+class GE_Game_random(GE_Game):
+    def __init__(self, npoints, vh=100000, outfile=r'outfile.kml'):
+        self.counter = 0
+        self.vh = 100000
+        self.outfile = outfile
+        self.active = True
+        self.npoints = npoints
 
+    def make_point_series(self):
+        print "Creating Points"
+        lon_list = []
+        lat_list = []
+        counter_local = 0
+        p = 'vectors/world.shp'
+        ds = ogr.Open(p)
+        lyr = ds.GetLayerByIndex(0)
+        feat = lyr.GetFeature(0)
+        geom = feat.geometry()
+        while counter_local < self.npoints:
+            lon, lat = self.make_random_point()
+            g, l = self.geom_sr_from_point(lat, lon, 4326)
+            if ogr.Geometry.Intersects(g, geom):
+                lon_list.append(lon)
+                lat_list.append(lat)
+                counter_local += 1
+                print counter_local
+        ds = None
+        self.nfeatures = len(lon_list)
+        self.lon = np.array(lon_list)
+        self.lat = np.array(lat_list)
+
+class GE_Game_Vector(GE_Game):
+
+    def __init__(self, input_vector, vh=5000, outfile=r'outfile.kml'):
+        self.counter = 0
+        self.vh = vh
+        self.outfile = outfile
+        self.active = True
+        self.input_vector = os.path.abspath(input_vector)
+
+    def make_point_series(self):
+        with fiona.open(self.input_vector) as ds:
+            self.nfeatures = ds.session.get_length() # get number of features
+            self.index = np.arange(0, self.nfeatures, dtype=np.uint16) # make indices
+            np.random.shuffle(self.index)
+            self.lon, self.lat = np.array([ds[int(i)]['geometry']['coordinates'][:2] for i in self.index]).T
 
 def main():
-
-    # set game modes from input args
-    #print args.shp
-    """
-    if args.shp:
-        game = GE_Game(input_vector=args.shp[0], vh=args.vh)
-    else:
-        game = GE_Game(vh=args.vh)
-    """
     # Start Gui and run program
-    #app = QtGui.QApplication(sys.argv)
-    #ex = GameGui(game)
     app = QtGui.QApplication (sys.argv)
-    m = MainWindow(GE_Game(vh=args.vh))
+    m = MainWindow()
     sys.exit (app.exec_ () )
-
-    #ex = StartMenu(game)
-    #sys.exit(app.exec_())
 
 if __name__ == "__main__":
     main()
