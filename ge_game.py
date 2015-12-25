@@ -30,7 +30,6 @@ class GameMenu(QtGui.QWidget):
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
 
 # TODO: restart needs to be fixed
-# TODO: auto reload for settings
 # TODO: make main Menu Ui separate
 
 class MainWindow(QtGui.QMainWindow):
@@ -44,7 +43,7 @@ class MainWindow(QtGui.QMainWindow):
         self.gameMenu = GameMenu()
 
         # mainMenu Actions
-        self.ui.pushButton.clicked.connect(self.start_game2)
+        self.ui.pushButton.clicked.connect(self.start_game)
         self.ui.pushButton_2.clicked.connect(self.quit_game)
         self.ui.toolButton.clicked.connect(self.showDialog)
 
@@ -57,12 +56,23 @@ class MainWindow(QtGui.QMainWindow):
         self.gameMenu.ui.pushButton_Next.clicked.connect(self.next_feature)
         self.gameMenu.ui.pushButton_Quit.clicked.connect(self.back_to_main)
         self.gameMenu.ui.pushButton_Settings.clicked.connect(self.show_settings)
+        self.gameMenu.ui.pushButton_Reload.clicked.connect(self.restart_game)
         self.show()
 
+    def autoset_game_mode(self):
+        # check out selected mode and call SubClass accordingly
+        if self.ui.radioButton.isChecked():
+            self.game = GE_Game_random(npoints=self.ui.spinBox.value())
+        elif (self.ui.radioButton_2.isChecked()) and (self.fname):
+            self.game = GE_Game_Vector(self.fname)
+
     def back_to_main(self):
+        self.game = None
         self.settingsMenu.hide()
         self.settingsMenu.ui.pushButton_2.setEnabled(False)
         self.gameMenu.hide()
+        self.gameMenu.ui.pushButton_Next.setEnabled(True)
+        self.gameMenu.ui.pushButton_Reload.setEnabled(False)
         self.show()
 
     def showDialog(self):
@@ -70,7 +80,6 @@ class MainWindow(QtGui.QMainWindow):
                 os.getcwd())
         self.ui.radioButton_2.setChecked(True)
         self.ui.radioButton.setChecked(False)
-        #TODO: show filename
         self.ui.lineEdit_filePath.setText(self.fname)
 
     def show_settings_onstart(self):
@@ -82,7 +91,7 @@ class MainWindow(QtGui.QMainWindow):
             self.game.vh = 7000
         self.settingsMenu.show()
         self.hide()
-        self.game.next()
+        self.current_feature()
 
     def show_settings(self):
         self.settingsMenu.show()
@@ -95,29 +104,24 @@ class MainWindow(QtGui.QMainWindow):
     def show_game(self):
         self.settingsMenu.hide()
         self.gameMenu.show()
+        self.current_feature()
 
     def start_game(self):
-        self.game = GE_Game()
-        self.settingsMenu.hide()
-        self.settingsMenu.ui.pushButton_2.setEnabled(False)
-        self.hide()
-        self.gameMenu.show()
-        self.game.make_random_point_series(npoints=self.ui.spinBox.value())
-        self.game.next()
-        self.update_feature_counter()
-
-    def start_game2(self):
         # check out selected mode and call SubClass accordingly
-        if self.ui.radioButton.isChecked():
-            self.game = GE_Game_random(npoints=self.ui.spinBox.value())
-        elif (self.ui.radioButton_2.isChecked()) and (self.fname):
-            self.game = GE_Game_Vector(self.fname)
-        else:
-            return
+        self.autoset_game_mode()
         self.settingsMenu.ui.lineEdit.setText(str(self.game.vh))
         self.settingsMenu.show()
         self.hide()
         self.game.make_point_series()
+
+    # TODO: Fix Bug - finished after 2 features after reload
+    def restart_game(self):
+        self.game.make_point_series()
+        self.game.counter=0
+        self.update_feature_counter()
+        self.current_feature()
+        self.gameMenu.ui.pushButton_Next.setEnabled(True)
+        self.gameMenu.ui.pushButton_Reload.setEnabled(False)
 
     def file_loader(self):
         self.game.input_vector = str(QtGui.QFileDialog.getOpenFileName()) # Filename line
@@ -126,8 +130,12 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.radioButton_2.setChecked(True)
         self.ui.radioButton.setChecked(False)
 
+    def current_feature(self):
+        self.game.call_current()
+        self.update_feature_counter()
+
     def next_feature(self):
-        self.game.next()
+        self.game.call_next()
         self.update_feature_counter()
         if not self.game.active:
             self.gameMenu.ui.pushButton_Next.setEnabled(False)
@@ -137,7 +145,7 @@ class MainWindow(QtGui.QMainWindow):
         self.close()
 
     def update_feature_counter(self):
-        self.gameMenu.ui.label.setText('Feature: {0} / {1}'.format(self.game.counter, self.game.nfeatures))
+        self.gameMenu.ui.label.setText('Feature: {0} / {1}'.format(self.game.counter+1, self.game.nfeatures))
 
 class GE_Game():
 
@@ -171,16 +179,15 @@ class GE_Game():
         f.writelines(string)
         f.close()
 
-    # TODO: needs to be fixed
-    def reload(self):
+    def call_current(self):
         self.make_kml(self.lon[self.counter], self.lat[self.counter])
         os.system(self.outfile)
-    # TODO: needs to be fixed
-    def next(self):
-        self.make_kml(self.lon[self.counter], self.lat[self.counter])
-        os.system(self.outfile)
+
+    def call_next(self):
         self.counter += 1
-        if self.counter == self.nfeatures:
+        self.make_kml(self.lon[self.counter], self.lat[self.counter])
+        os.system(self.outfile)
+        if self.counter == self.nfeatures-1:
             self.active = False
 
     @staticmethod
