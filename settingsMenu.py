@@ -25,18 +25,19 @@ except AttributeError:
 class Ui_SettingsMenu(object):
     def setupUi(self, SettingsMenu):
         SettingsMenu.setObjectName(_fromUtf8("SettingsMenu"))
-        SettingsMenu.resize(264, 108)
+        SettingsMenu.resize(264, 77)
         self.pushButton = QtGui.QPushButton(SettingsMenu)
-        self.pushButton.setGeometry(QtCore.QRect(10, 70, 75, 23))
+        self.pushButton.setGeometry(QtCore.QRect(10, 40, 75, 23))
+        self.pushButton.setDefault(True)
         self.pushButton.setObjectName(_fromUtf8("pushButton"))
         self.pushButton_2 = QtGui.QPushButton(SettingsMenu)
-        self.pushButton_2.setGeometry(QtCore.QRect(110, 70, 81, 23))
+        self.pushButton_2.setGeometry(QtCore.QRect(130, 40, 81, 23))
         self.pushButton_2.setObjectName(_fromUtf8("pushButton_2"))
         self.lineEdit = QtGui.QLineEdit(SettingsMenu)
-        self.lineEdit.setGeometry(QtCore.QRect(80, 30, 113, 20))
+        self.lineEdit.setGeometry(QtCore.QRect(100, 10, 113, 20))
         self.lineEdit.setObjectName(_fromUtf8("lineEdit"))
         self.label = QtGui.QLabel(SettingsMenu)
-        self.label.setGeometry(QtCore.QRect(10, 30, 61, 16))
+        self.label.setGeometry(QtCore.QRect(10, 10, 81, 16))
         self.label.setObjectName(_fromUtf8("label"))
 
         self.retranslateUi(SettingsMenu)
@@ -46,5 +47,5 @@ class Ui_SettingsMenu(object):
         SettingsMenu.setWindowTitle(_translate("SettingsMenu", "Settings", None))
         self.pushButton.setText(_translate("SettingsMenu", "OK", None))
         self.pushButton_2.setText(_translate("SettingsMenu", "Main Menu", None))
-        self.label.setText(_translate("SettingsMenu", "View height", None))
+        self.label.setText(_translate("SettingsMenu", "View height in m", None))
 

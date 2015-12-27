@@ -28,6 +28,8 @@ class Ui_GameMenu(object):
         GameMenu.resize(207, 110)
         self.pushButton_Next = QtGui.QPushButton(GameMenu)
         self.pushButton_Next.setGeometry(QtCore.QRect(20, 20, 75, 23))
+        self.pushButton_Next.setAutoDefault(True)
+        self.pushButton_Next.setDefault(True)
         self.pushButton_Next.setObjectName(_fromUtf8("pushButton_Next"))
         self.pushButton_Quit = QtGui.QPushButton(GameMenu)
         self.pushButton_Quit.setGeometry(QtCore.QRect(110, 20, 75, 23))
@@ -52,14 +54,4 @@ class Ui_GameMenu(object):
         self.pushButton_Reload.setText(_translate("GameMenu", "Reload", None))
         self.pushButton_Settings.setText(_translate("GameMenu", "Settings", None))
         self.label.setText(_translate("GameMenu", "TextLabel", None))
-
-
-if __name__ == "__main__":
-    import sys
-    app = QtGui.QApplication(sys.argv)
-    GameMenu = QtGui.QDialog()
-    ui = Ui_GameMenu()
-    ui.setupUi(GameMenu)
-    GameMenu.show()
-    sys.exit(app.exec_())
 
