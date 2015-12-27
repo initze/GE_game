@@ -1,14 +1,11 @@
 from lxml import etree
 from pykml.factory import KML_ElementMaker as KML
-from pykml.factory import ATOM_ElementMaker as ATOM
 from pykml.factory import GX_ElementMaker as GX
 from osgeo import ogr
-import argparse
 import numpy as np
-import fiona
 import os
 import sys
-from PyQt4 import QtGui, Qt, QtCore
+from PyQt4 import QtGui, QtCore
 from mainMenu import Ui_MainWindow
 from gameMenu import Ui_GameMenu
 from settingsMenu import Ui_SettingsMenu
@@ -33,7 +30,6 @@ class GameMenu(QtGui.QWidget):
 # TODO: make main Menu Ui separate
 
 class MainWindow(QtGui.QMainWindow):
-    #def __init__(self, game):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.ui=Ui_MainWindow()
@@ -76,8 +72,9 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
 
     def showDialog(self):
+        filters = "Vector Files(*.shp *.kml)"
         self.fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file',
-                os.getcwd())
+                os.getcwd(), filters)
         self.ui.radioButton_2.setChecked(True)
         self.ui.radioButton.setChecked(False)
         self.ui.lineEdit_filePath.setText(self.fname)
@@ -246,11 +243,20 @@ class GE_Game_Vector(GE_Game):
         self.input_vector = os.path.abspath(input_vector)
 
     def make_point_series(self):
-        with fiona.open(self.input_vector) as ds:
-            self.nfeatures = ds.session.get_length() # get number of features
-            self.index = np.arange(0, self.nfeatures, dtype=np.uint16) # make indices
-            np.random.shuffle(self.index)
-            self.lon, self.lat = np.array([ds[int(i)]['geometry']['coordinates'][:2] for i in self.index]).T
+        ds = ogr.Open(self.input_vector)
+        lyr = ds.GetLayerByIndex(0)
+        self.nfeatures = lyr.GetFeatureCount()
+        index = np.arange(0, self.nfeatures, dtype=np.uint16) # make indices
+        np.random.shuffle(index)
+        self.lon = np.empty((self.nfeatures))
+        self.lat = np.empty((self.nfeatures))
+        for i in index:
+            i = int(i)
+            lyr = ds.GetLayerByIndex(0)
+            feat = lyr.GetFeature(i)
+            self.lon[i], self.lat[i], _ = feat.geometry().GetPoint()
+        ds = None
+
 
 def main():
     # Start Gui and run program
