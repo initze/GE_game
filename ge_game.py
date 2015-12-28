@@ -79,20 +79,20 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.radioButton.setChecked(False)
         self.ui.lineEdit_filePath.setText(self.fname)
 
-    def show_settings_onstart(self):
-        if self.ui.radioButton.isChecked():
-            self.mode = 1
-            self.game.vh = 100000
-        elif self.ui.radioButton_2.isChecked():
-            self.mode=2
-            self.game.vh = 7000
-        self.settingsMenu.show()
-        self.hide()
-        self.current_feature()
-
     def show_settings(self):
+        self.set_settings_table()
         self.settingsMenu.show()
         self.gameMenu.hide()
+
+    def set_settings_table(self):
+        self.settingsMenu.ui.tableWidget.setHorizontalHeaderLabels(['Field', 'Example'])
+        self.settingsMenu.ui.tableWidget.setRowCount(self.game.nfields)
+        self.settingsMenu.ui.tableWidget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        for fname, fval, i in zip(self.game.fieldname, self.game.fieldvalue, range(self.game.nfields)):
+            self.settingsMenu.ui.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(fname))
+            self.settingsMenu.ui.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(str(fval)))
+        self.settingsMenu.ui.tableWidget.setEnabled(True)
+        #self.settingsMenu.si = self.settingsMenu.ui.tableWidget.selectedIndexes()
 
     def update_vh(self):
         self.game.vh = float(self.settingsMenu.ui.lineEdit.text())
@@ -106,10 +106,11 @@ class MainWindow(QtGui.QMainWindow):
     def start_game(self):
         # check out selected mode and call SubClass accordingly
         self.autoset_game_mode()
-        self.settingsMenu.ui.lineEdit.setText(str(self.game.vh))
-        self.settingsMenu.show()
         self.hide()
         self.game.make_point_series()
+        self.game.get_fields()
+        self.settingsMenu.ui.lineEdit.setText(str(self.game.vh))
+        self.show_settings()
 
     # TODO: Fix Bug - finished after 2 features after reload
     def restart_game(self):
@@ -150,6 +151,7 @@ class GE_Game():
         self.counter = 0
         self.outfile = outfile
         self.active = True
+
 
     def make_kml(self, lon, lat):
         """
@@ -201,6 +203,12 @@ class GE_Game():
         sr_bbox.ImportFromEPSG(int(epsg))
         geom_bbox.AssignSpatialReference(sr_bbox)
         return geom_bbox, sr_bbox
+
+    def get_fields(self):
+        self.nfields = None
+        self.fieldname = None
+        self.fieldvalue = None
+        pass
 
 class GE_Game_random(GE_Game):
     def __init__(self, npoints, vh=100000, outfile=r'outfile.kml'):
@@ -257,6 +265,14 @@ class GE_Game_Vector(GE_Game):
             self.lon[i], self.lat[i], _ = feat.geometry().GetPoint()
         ds = None
 
+    def get_fields(self):
+        ds = ogr.Open(self.input_vector)
+        lyr = ds.GetLayerByIndex(0)
+        feat = lyr.GetFeature(0)
+        self.nfields = feat.GetFieldCount()
+        self.fieldname, self.fieldvalue = np.array([(feat.GetFieldDefnRef(i).GetName(), feat.GetField(i))
+                                                    for i in range(self.nfields)]).T
+        ds = None
 
 def main():
     # Start Gui and run program
