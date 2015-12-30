@@ -49,10 +49,12 @@ class MainWindow(QtGui.QMainWindow):
         self.settingsMenu.ui.pushButton_2.clicked.connect(self.back_to_main)
 
         # gameMenu Actions
+        self.gameMenu.ui.pushButton_Previous.clicked.connect(self.previous_feature)
         self.gameMenu.ui.pushButton_Next.clicked.connect(self.next_feature)
         self.gameMenu.ui.pushButton_Quit.clicked.connect(self.back_to_main)
         self.gameMenu.ui.pushButton_Settings.clicked.connect(self.show_settings)
         self.gameMenu.ui.pushButton_Reload.clicked.connect(self.restart_game)
+        self.gameMenu.ui.pushButton_Solution.clicked.connect(self.show_solution)
         self.show()
 
     def autoset_game_mode(self):
@@ -72,6 +74,10 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
 
     def showDialog(self):
+        """
+        File selection pop-up dialog
+        :return:
+        """
         filters = "Vector Files(*.shp *.kml)"
         self.fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file',
                 os.getcwd(), filters)
@@ -79,12 +85,40 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.radioButton.setChecked(False)
         self.ui.lineEdit_filePath.setText(self.fname)
 
+    def check_gameMenu_setup(self):
+        """
+        Check current status and setup active and inactive features of settingsMenu
+        :return:
+        """
+        if self.game.counter == 0:
+            #previous and reload disabled
+            self.gameMenu.ui.pushButton_Previous.setEnabled(False)
+            self.gameMenu.ui.pushButton_Reload.setEnabled(False)
+        if self.game.counter == self.game.nfeatures-1:
+            #next disabled reload enabled
+            self.gameMenu.ui.pushButton_Previous.setEnabled(True)
+            self.gameMenu.ui.pushButton_Next.setEnabled(False)
+            self.gameMenu.ui.pushButton_Reload.setEnabled(True)
+        else:
+            #reload disabled others enabled
+            self.gameMenu.ui.pushButton_Previous.setEnabled(True)
+            self.gameMenu.ui.pushButton_Next.setEnabled(True)
+            self.gameMenu.ui.pushButton_Reload.setEnabled(False)
+
     def show_settings(self):
+        """
+        Show settingsMenu and hide other widgets
+        :return:
+        """
         self.set_settings_table()
         self.settingsMenu.show()
         self.gameMenu.hide()
 
     def set_settings_table(self):
+        """
+        Setup table within settingsMenu for solution field selection
+        :return:
+        """
         self.settingsMenu.ui.tableWidget.setHorizontalHeaderLabels(['Field', 'Example'])
         self.settingsMenu.ui.tableWidget.setRowCount(self.game.nfields)
         self.settingsMenu.ui.tableWidget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -92,23 +126,33 @@ class MainWindow(QtGui.QMainWindow):
             self.settingsMenu.ui.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(fname))
             self.settingsMenu.ui.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(str(fval)))
         self.settingsMenu.ui.tableWidget.setEnabled(True)
-        #self.settingsMenu.si = self.settingsMenu.ui.tableWidget.selectedIndexes()
+        self.settingsMenu.row_select = self.settingsMenu.ui.tableWidget.currentRow()
 
     def update_vh(self):
+        """
+        Update manually selected view-height
+        :return:
+        """
         self.game.vh = float(self.settingsMenu.ui.lineEdit.text())
-        #self.game.reload() # needs some improvement
 
     def show_game(self):
+        #idx = self.settingsMenu.ui.tableWidget.selectedIndexes()[0]
+        #self.game.get_solutions(idx)
+        self.check_gameMenu_setup()
         self.settingsMenu.hide()
         self.gameMenu.show()
         self.current_feature()
 
     def start_game(self):
+        """
+        Set-up game and create point-series
+        :return:
+        """
         # check out selected mode and call SubClass accordingly
         self.autoset_game_mode()
         self.hide()
         self.game.make_point_series()
-        self.game.get_fields()
+        self.game.get_fields() # check
         self.settingsMenu.ui.lineEdit.setText(str(self.game.vh))
         self.show_settings()
 
@@ -123,21 +167,37 @@ class MainWindow(QtGui.QMainWindow):
 
     def file_loader(self):
         self.game.input_vector = str(QtGui.QFileDialog.getOpenFileName()) # Filename line
-        print self.game.input_vector
-        print os.path.exists(self.game.input_vector)
         self.ui.radioButton_2.setChecked(True)
         self.ui.radioButton.setChecked(False)
 
     def current_feature(self):
+        """
+        load current feature
+        :return:
+        """
         self.game.call_current()
         self.update_feature_counter()
+        self.check_gameMenu_setup()
 
     def next_feature(self):
+        """
+        load next feature
+        :return:
+        """
         self.game.call_next()
         self.update_feature_counter()
-        if not self.game.active:
-            self.gameMenu.ui.pushButton_Next.setEnabled(False)
-            self.gameMenu.ui.pushButton_Reload.setEnabled(True)
+        self.check_gameMenu_setup()
+        self.clear_solution_field()
+
+    def previous_feature(self):
+        """
+        load previous feature
+        :return:
+        """
+        self.game.call_previous()
+        self.update_feature_counter()
+        self.check_gameMenu_setup()
+        self.clear_solution_field()
 
     def quit_game(self):
         self.close()
@@ -145,13 +205,28 @@ class MainWindow(QtGui.QMainWindow):
     def update_feature_counter(self):
         self.gameMenu.ui.label.setText('Feature: {0} / {1}'.format(self.game.counter+1, self.game.nfeatures))
 
+    # TODO: read out selected field from settingsMenu Table
+    def show_solution(self):
+        """
+        print solution to specified lineEdit widget
+        :return:
+        """
+        self.game.get_solution(0, int(self.game.index[self.game.counter])) # selected field hard-coded to 0
+        self.gameMenu.ui.lineEdit_Solution.setText(self.game.solution)
+
+    def clear_solution_field(self):
+        """
+        Clear solution lineEdit widget
+        :return:
+        """
+        self.gameMenu.ui.lineEdit_Solution.setText('')
+
 class GE_Game():
 
     def __init__(self, outfile=r'outfile.kml'):
         self.counter = 0
         self.outfile = outfile
         self.active = True
-
 
     def make_kml(self, lon, lat):
         """
@@ -188,6 +263,13 @@ class GE_Game():
         os.system(self.outfile)
         if self.counter == self.nfeatures-1:
             self.active = False
+
+    def call_previous(self):
+        if self.counter == 0:
+            return
+        self.counter -= 1
+        self.make_kml(self.lon[self.counter], self.lat[self.counter])
+        os.system(self.outfile)
 
     @staticmethod
     def make_random_point():
@@ -249,20 +331,22 @@ class GE_Game_Vector(GE_Game):
         self.outfile = outfile
         self.active = True
         self.input_vector = os.path.abspath(input_vector)
+        self.solution = ''
+        self.nfields = 0
 
     def make_point_series(self):
         ds = ogr.Open(self.input_vector)
         lyr = ds.GetLayerByIndex(0)
         self.nfeatures = lyr.GetFeatureCount()
-        index = np.arange(0, self.nfeatures, dtype=np.uint16) # make indices
-        np.random.shuffle(index)
-        self.lon = np.empty((self.nfeatures))
-        self.lat = np.empty((self.nfeatures))
-        for i in index:
+        self.index = np.arange(0, self.nfeatures, dtype=np.uint16) # make indices
+        np.random.shuffle(self.index)
+        pts = []
+        for i in self.index:
             i = int(i)
             lyr = ds.GetLayerByIndex(0)
             feat = lyr.GetFeature(i)
-            self.lon[i], self.lat[i], _ = feat.geometry().GetPoint()
+            pts.append(feat.geometry().GetPoint())
+        self.lon, self.lat, _ = np.array(pts).T
         ds = None
 
     def get_fields(self):
@@ -273,6 +357,12 @@ class GE_Game_Vector(GE_Game):
         self.fieldname, self.fieldvalue = np.array([(feat.GetFieldDefnRef(i).GetName(), feat.GetField(i))
                                                     for i in range(self.nfields)]).T
         ds = None
+
+    def get_solution(self, field_id, index_id):
+        ds = ogr.Open(self.input_vector)
+        lyr = ds.GetLayerByIndex(0)
+        feat = lyr.GetFeature(index_id)
+        self.solution = feat.GetField(field_id)
 
 def main():
     # Start Gui and run program
