@@ -38,6 +38,7 @@ class MainWindow(QtGui.QMainWindow):
         self.settingsMenu = Settings()
         self.gameMenu = GameMenu()
 
+
         # mainMenu Actions
         self.ui.pushButton.clicked.connect(self.start_game)
         self.ui.pushButton_2.clicked.connect(self.quit_game)
@@ -126,7 +127,8 @@ class MainWindow(QtGui.QMainWindow):
             self.settingsMenu.ui.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(fname))
             self.settingsMenu.ui.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(str(fval)))
         self.settingsMenu.ui.tableWidget.setEnabled(True)
-        self.settingsMenu.row_select = self.settingsMenu.ui.tableWidget.currentRow()
+        self.settingsMenu.ui.tableWidget.selectRow(self.selected_table_row)
+        #self.settingsMenu.row_select = int(self.settingsMenu.ui.tableWidget.currentRow())
 
     def update_vh(self):
         """
@@ -136,7 +138,7 @@ class MainWindow(QtGui.QMainWindow):
         self.game.vh = float(self.settingsMenu.ui.lineEdit.text())
 
     def show_game(self):
-        #idx = self.settingsMenu.ui.tableWidget.selectedIndexes()[0]
+
         #self.game.get_solutions(idx)
         self.check_gameMenu_setup()
         self.settingsMenu.hide()
@@ -149,6 +151,7 @@ class MainWindow(QtGui.QMainWindow):
         :return:
         """
         # check out selected mode and call SubClass accordingly
+        self.selected_table_row = 0
         self.autoset_game_mode()
         self.hide()
         self.game.make_point_series()
@@ -205,13 +208,13 @@ class MainWindow(QtGui.QMainWindow):
     def update_feature_counter(self):
         self.gameMenu.ui.label.setText('Feature: {0} / {1}'.format(self.game.counter+1, self.game.nfeatures))
 
-    # TODO: read out selected field from settingsMenu Table
     def show_solution(self):
         """
         print solution to specified lineEdit widget
         :return:
         """
-        self.game.get_solution(0, int(self.game.index[self.game.counter])) # selected field hard-coded to 0
+        self.selected_table_row = int(self.settingsMenu.ui.tableWidget.currentRow())
+        self.game.get_solution(self.selected_table_row, int(self.game.index[self.game.counter]))
         self.gameMenu.ui.lineEdit_Solution.setText(self.game.solution)
 
     def clear_solution_field(self):
@@ -333,6 +336,7 @@ class GE_Game_Vector(GE_Game):
         self.input_vector = os.path.abspath(input_vector)
         self.solution = ''
         self.nfields = 0
+        self.nfeatures = 0
 
     def make_point_series(self):
         ds = ogr.Open(self.input_vector)
